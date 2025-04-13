@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import ProductForm from '@/components/ProductForm';
 import { toast } from 'sonner';
-import { addProduct } from '@/services/productService';
+import { addProduct, getProductInfoFromBarcode } from '@/services/productService';
 import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
@@ -24,9 +26,31 @@ type ProductFormValues = z.infer<typeof productSchema>;
 const ScanPage = () => {
   const navigate = useNavigate();
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+  const [manualBarcodeInput, setManualBarcodeInput] = useState<string>('');
+  const [isManualEntry, setIsManualEntry] = useState(false);
   
   const handleScanSuccess = (barcode: string) => {
     setScannedBarcode(barcode);
+    
+    // Try to get product info from barcode database
+    const productInfo = getProductInfoFromBarcode(barcode);
+    if (productInfo) {
+      toast.success(`Found product: ${productInfo.name}`);
+    }
+  };
+  
+  const handleManualBarcodeSubmit = () => {
+    if (manualBarcodeInput.trim()) {
+      setScannedBarcode(manualBarcodeInput);
+      
+      // Try to get product info from barcode database
+      const productInfo = getProductInfoFromBarcode(manualBarcodeInput);
+      if (productInfo) {
+        toast.success(`Found product: ${productInfo.name}`);
+      }
+    } else {
+      toast.error('Please enter a barcode');
+    }
   };
   
   const handleFormSubmit = (data: ProductFormValues) => {
@@ -58,7 +82,54 @@ const ScanPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">1. Scan Barcode</h2>
-          <BarcodeScanner onScanSuccess={handleScanSuccess} />
+          
+          {!isManualEntry ? (
+            <>
+              <BarcodeScanner onScanSuccess={handleScanSuccess} />
+              
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                  Having trouble scanning?
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsManualEntry(true)}
+                  className="text-sm"
+                >
+                  Enter Barcode Manually
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <label htmlFor="manual-barcode" className="block text-sm font-medium mb-1">
+                    Barcode
+                  </label>
+                  <Input
+                    id="manual-barcode"
+                    value={manualBarcodeInput}
+                    onChange={(e) => setManualBarcodeInput(e.target.value)}
+                    placeholder="Enter barcode number"
+                  />
+                </div>
+                <Button onClick={handleManualBarcodeSubmit}>
+                  Submit
+                </Button>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsManualEntry(false);
+                  setManualBarcodeInput('');
+                }}
+                className="text-sm"
+              >
+                Go Back to Scanner
+              </Button>
+            </div>
+          )}
           
           {scannedBarcode && (
             <div className="bg-blue-50 p-4 rounded-lg">

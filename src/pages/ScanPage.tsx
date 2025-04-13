@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import ProductForm from '@/components/ProductForm';
@@ -28,6 +28,18 @@ const ScanPage = () => {
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const [manualBarcodeInput, setManualBarcodeInput] = useState<string>('');
   const [isManualEntry, setIsManualEntry] = useState(false);
+  const [key, setKey] = useState(0); // Add a key to force remount of scanner
+  
+  // Reset scanner when navigating back to this page
+  useEffect(() => {
+    // Reset state when component mounts
+    setScannedBarcode(null);
+    setManualBarcodeInput('');
+    setIsManualEntry(false);
+    
+    // Force remount of scanner component
+    setKey(prev => prev + 1);
+  }, []);
   
   const handleScanSuccess = (barcode: string) => {
     setScannedBarcode(barcode);
@@ -85,7 +97,10 @@ const ScanPage = () => {
           
           {!isManualEntry ? (
             <>
-              <BarcodeScanner onScanSuccess={handleScanSuccess} />
+              <BarcodeScanner 
+                key={key} // Force remount when key changes
+                onScanSuccess={handleScanSuccess} 
+              />
               
               <div className="flex justify-between items-center">
                 <div className="text-sm text-muted-foreground">
@@ -123,6 +138,8 @@ const ScanPage = () => {
                 onClick={() => {
                   setIsManualEntry(false);
                   setManualBarcodeInput('');
+                  // Force scanner remount when switching back
+                  setKey(prev => prev + 1);
                 }}
                 className="text-sm"
               >

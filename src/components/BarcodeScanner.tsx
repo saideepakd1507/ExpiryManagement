@@ -4,7 +4,7 @@ import { Html5Qrcode, Html5QrcodeScannerState, Html5QrcodeSupportedFormats } fro
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Camera, XCircle, RefreshCw } from 'lucide-react';
+import { Camera, XCircle, RefreshCw, ScanLine } from 'lucide-react';
 
 interface BarcodeScannerProps {
   onScanSuccess: (barcode: string) => void;
@@ -16,14 +16,22 @@ const BarcodeScanner = ({ onScanSuccess }: BarcodeScannerProps) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = 'barcode-scanner';
   const scanAttempts = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Create scanner instance only once 
   useEffect(() => {
-    // Clean up on unmount
     return () => {
+      // Clean up on unmount
       if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current.stop().catch(error => {
-          console.error('Error stopping scanner:', error);
+          console.error('Error stopping scanner on unmount:', error);
         });
+      }
+      
+      // Clean up the scanner instance
+      if (scannerRef.current) {
+        scannerRef.current.clear();
+        scannerRef.current = null;
       }
     };
   }, []);
@@ -31,9 +39,19 @@ const BarcodeScanner = ({ onScanSuccess }: BarcodeScannerProps) => {
   const startScanner = async () => {
     try {
       setCameraError(null);
-      // Initialize the scanner if it doesn't exist
+      
+      // Ensure scanner container exists
+      if (!containerRef.current) {
+        toast.error("Scanner container not found");
+        return;
+      }
+      
+      // Initialize or clear the scanner
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode(scannerContainerId);
+      } else if (scannerRef.current.isScanning) {
+        // If already scanning, stop it first
+        await scannerRef.current.stop();
       }
 
       setIsScanning(true);
@@ -95,15 +113,21 @@ const BarcodeScanner = ({ onScanSuccess }: BarcodeScannerProps) => {
 
   const stopScanner = () => {
     if (scannerRef.current && scannerRef.current.isScanning) {
-      scannerRef.current.stop().catch(error => {
+      scannerRef.current.stop().then(() => {
+        console.log('Scanner stopped successfully');
+        setIsScanning(false);
+      }).catch(error => {
         console.error('Error stopping scanner:', error);
+        setIsScanning(false);
       });
+    } else {
+      setIsScanning(false);
     }
-    setIsScanning(false);
   };
 
   const restartScanner = () => {
     stopScanner();
+    // Add a small delay to ensure the scanner is fully stopped
     setTimeout(() => {
       startScanner();
     }, 500);
@@ -146,11 +170,15 @@ const BarcodeScanner = ({ onScanSuccess }: BarcodeScannerProps) => {
           
           <div 
             id={scannerContainerId} 
+            ref={containerRef}
             className="w-full aspect-video rounded-lg relative overflow-hidden bg-gray-100"
           >
             {!isScanning && !cameraError && (
               <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                <p>Camera will appear here</p>
+                <div className="text-center">
+                  <ScanLine className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+                  <p>Camera will appear here</p>
+                </div>
               </div>
             )}
             {cameraError && (

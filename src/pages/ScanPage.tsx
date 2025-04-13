@@ -31,7 +31,18 @@ const ScanPage = () => {
   
   const handleFormSubmit = (data: ProductFormValues) => {
     try {
-      addProduct(data);
+      // Ensure all required properties are present before passing to addProduct
+      const productData = {
+        name: data.name,
+        barcode: data.barcode,
+        batchId: data.batchId,
+        expiryDate: data.expiryDate,
+        quantity: data.quantity,
+        category: data.category,
+        location: data.location
+      };
+      
+      addProduct(productData);
       toast.success('Product added successfully');
       navigate('/');
     } catch (error) {

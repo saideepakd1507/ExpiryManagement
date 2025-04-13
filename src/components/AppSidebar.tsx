@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { BarChart, Clipboard, Home, RotateCcw, Scanner, Settings, Package } from "lucide-react";
+import { BarChart, Clipboard, Home, RotateCcw, Settings, Package, QrCode } from "lucide-react";
 
 const AppSidebar = () => {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ const AppSidebar = () => {
 
   const menuItems = [
     { label: 'Dashboard', path: '/', icon: Home },
-    { label: 'Scan Product', path: '/scan', icon: Scanner },
+    { label: 'Scan Product', path: '/scan', icon: QrCode },
     { label: 'Add Product', path: '/add', icon: Package },
     { label: 'Products', path: '/products', icon: Clipboard },
     { label: 'Analytics', path: '/analytics', icon: BarChart },
@@ -46,7 +46,7 @@ const AppSidebar = () => {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton 
-                    active={isActive(item.path)}
+                    aria-current={isActive(item.path) ? "page" : undefined}
                     onClick={() => navigate(item.path)}
                   >
                     <item.icon className="h-5 w-5 mr-2" />

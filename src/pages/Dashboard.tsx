@@ -6,7 +6,7 @@ import ProductList from '@/components/ProductList';
 import { Button } from '@/components/ui/button';
 import { getProductsByFilter, deleteProduct } from '@/services/productService';
 import { ProductFilter } from '@/types/product';
-import { ArrowRight, PackagePlus, Scanner } from 'lucide-react';
+import { ArrowRight, Package, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Dashboard = () => {
@@ -32,11 +32,11 @@ const Dashboard = () => {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <div className="flex gap-2">
           <Button onClick={() => navigate('/scan')}>
-            <Scanner className="mr-2 h-4 w-4" />
+            <QrCode className="mr-2 h-4 w-4" />
             Scan Product
           </Button>
           <Button onClick={() => navigate('/add')}>
-            <PackagePlus className="mr-2 h-4 w-4" />
+            <Package className="mr-2 h-4 w-4" />
             Add Product
           </Button>
         </div>

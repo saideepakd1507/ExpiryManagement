@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Edit, Trash2, Filter } from 'lucide-react';
+import { Edit, Trash2, Filter, Search as SearchIcon } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +39,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
 interface ProductListProps {
@@ -54,11 +53,29 @@ const ProductList = ({ products, onDelete, initialSearchTerm = '' }: ProductList
   const [statusFilter, setStatusFilter] = useState<ExpiryStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [highlightedProduct, setHighlightedProduct] = useState<string | null>(null);
 
   // Update search term when initialSearchTerm changes
   useEffect(() => {
     setSearchTerm(initialSearchTerm);
-  }, [initialSearchTerm]);
+    
+    // If there's a search term, find the first matching product and highlight it
+    if (initialSearchTerm) {
+      const matchingProduct = products.find(product => 
+        product.name.toLowerCase().includes(initialSearchTerm.toLowerCase()) ||
+        product.barcode?.toLowerCase().includes(initialSearchTerm.toLowerCase()) ||
+        product.batchId?.toLowerCase().includes(initialSearchTerm.toLowerCase())
+      );
+      
+      if (matchingProduct) {
+        setHighlightedProduct(matchingProduct.id);
+        // Clear highlight after 3 seconds
+        setTimeout(() => {
+          setHighlightedProduct(null);
+        }, 3000);
+      }
+    }
+  }, [initialSearchTerm, products]);
 
   const handleEdit = (id: string) => {
     navigate(`/edit/${id}`);
@@ -109,16 +126,25 @@ const ProductList = ({ products, onDelete, initialSearchTerm = '' }: ProductList
     }
   };
 
+  const getRowStyles = (product: Product) => {
+    const statusStyle = getStatusStyles(product.expiryDate);
+    const highlightStyle = highlightedProduct === product.id ? 'bg-blue-100 animate-pulse' : '';
+    return `${statusStyle} ${highlightStyle}`.trim();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 justify-between">
         <div className="flex-1">
-          <Input
-            placeholder="Search by name, barcode, or batch ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-          />
+          <div className="relative">
+            <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, barcode, or batch ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md pl-8"
+            />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ExpiryStatus | 'all')}>
@@ -183,7 +209,7 @@ const ProductList = ({ products, onDelete, initialSearchTerm = '' }: ProductList
           <TableBody>
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
-                <TableRow key={product.id} className={getStatusStyles(product.expiryDate)}>
+                <TableRow key={product.id} className={getRowStyles(product)}>
                   <TableCell className="font-medium">
                     <div>
                       {product.name}

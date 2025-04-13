@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -12,21 +12,108 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle } from 'lucide-react';
+import { getStats } from '@/services/productService';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const SettingsPage = () => {
+  const navigate = useNavigate();
   const [expiryThreshold, setExpiryThreshold] = useState('2');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [appNotifications, setAppNotifications] = useState(true);
+  const [emailAddress, setEmailAddress] = useState('');
+  const [hasExpiringProducts, setHasExpiringProducts] = useState(false);
+
+  useEffect(() => {
+    // Check for expiring products on load
+    const stats = getStats();
+    setHasExpiringProducts(stats.expiredProducts > 0 || stats.nearExpiryProducts > 0);
+    
+    // Load saved settings from localStorage
+    const savedSettings = localStorage.getItem('notificationSettings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
+      setExpiryThreshold(settings.expiryThreshold || '2');
+      setEmailNotifications(settings.emailNotifications !== false);
+      setAppNotifications(settings.appNotifications !== false);
+      setEmailAddress(settings.emailAddress || '');
+    }
+    
+    // Set up app notifications if enabled
+    if (appNotifications && hasExpiringProducts) {
+      showNotificationToast();
+    }
+  }, []);
+
+  const showNotificationToast = () => {
+    const stats = getStats();
+    if (stats.expiredProducts > 0 || stats.nearExpiryProducts > 0) {
+      toast.warning(
+        `You have ${stats.expiredProducts} expired and ${stats.nearExpiryProducts} nearly expired products`,
+        {
+          duration: 5000,
+          action: {
+            label: "View Products",
+            onClick: () => navigate('/products?status=warning'),
+          },
+        }
+      );
+    }
+  };
 
   const handleSaveSettings = () => {
+    // Save settings to localStorage
+    const settings = {
+      expiryThreshold,
+      emailNotifications,
+      appNotifications,
+      emailAddress,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    localStorage.setItem('notificationSettings', JSON.stringify(settings));
+    
     // In a real app, these would be saved to a backend
     toast.success('Settings saved successfully');
+    
+    // Check if we should show notifications right away
+    if (appNotifications && hasExpiringProducts) {
+      showNotificationToast();
+    }
+  };
+
+  const handleTestNotification = () => {
+    if (appNotifications) {
+      toast.warning('This is a test expiry notification', {
+        duration: 5000,
+        action: {
+          label: "View Products",
+          onClick: () => navigate('/products'),
+        },
+      });
+    }
+    
+    if (emailNotifications && emailAddress) {
+      toast.success(`Test email notification would be sent to ${emailAddress}`);
+    }
   };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      {hasExpiringProducts && (
+        <Alert variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Attention Needed!</AlertTitle>
+          <AlertDescription>
+            You have products that are expired or expiring soon. Check your inventory.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-6">
         <Card>
@@ -83,6 +170,19 @@ const SettingsPage = () => {
                 />
               </div>
 
+              {emailNotifications && (
+                <div className="space-y-2">
+                  <Label htmlFor="email-address">Email Address</Label>
+                  <Input 
+                    id="email-address" 
+                    type="email" 
+                    placeholder="your@email.com"
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                  />
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="app-notifications">In-App Notifications</Label>
@@ -98,8 +198,9 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            <div className="pt-4">
+            <div className="pt-4 flex gap-2">
               <Button onClick={handleSaveSettings}>Save Settings</Button>
+              <Button variant="outline" onClick={handleTestNotification}>Test Notification</Button>
             </div>
           </CardContent>
         </Card>

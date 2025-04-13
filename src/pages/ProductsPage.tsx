@@ -1,17 +1,50 @@
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ProductList from '@/components/ProductList';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getAllProducts, deleteProduct } from '@/services/productService';
+import { getAllProducts, deleteProduct, getStats } from '@/services/productService';
 import { toast } from 'sonner';
-import { PackagePlus, Search, QrCode } from 'lucide-react';
+import { PackagePlus, Search, QrCode, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const ProductsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Extract search parameters from URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get('status');
+    const query = params.get('query');
+    
+    if (query) {
+      setSearchTerm(query);
+    }
+    
+    // Check for notifications based on settings
+    const notificationSettings = localStorage.getItem('notificationSettings');
+    if (notificationSettings) {
+      const settings = JSON.parse(notificationSettings);
+      const stats = getStats();
+      
+      if (settings.appNotifications && (stats.expiredProducts > 0 || stats.nearExpiryProducts > 0)) {
+        toast.warning(
+          `You have ${stats.expiredProducts} expired and ${stats.nearExpiryProducts} nearly expired products`,
+          {
+            duration: 5000,
+            action: {
+              label: "View Settings",
+              onClick: () => navigate('/settings'),
+            },
+          }
+        );
+      }
+    }
+  }, [location, navigate]);
   
   const products = getAllProducts();
   
@@ -24,6 +57,9 @@ const ProductsPage = () => {
       toast.error('Failed to delete product');
     }
   };
+
+  const stats = getStats();
+  const hasExpiringProducts = stats.expiredProducts > 0 || stats.nearExpiryProducts > 0;
   
   return (
     <div className="space-y-6">
@@ -53,6 +89,23 @@ const ProductsPage = () => {
           </div>
         </div>
       </div>
+      
+      {hasExpiringProducts && (
+        <Alert variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Attention Required!</AlertTitle>
+          <AlertDescription>
+            You have {stats.expiredProducts} expired and {stats.nearExpiryProducts} nearly expiring products.
+            <Button 
+              variant="link" 
+              className="p-0 h-auto text-yellow-800 underline" 
+              onClick={() => navigate('/settings')}
+            >
+              Configure notifications
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       <ProductList 
         key={refreshKey}

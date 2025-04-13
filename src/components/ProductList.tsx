@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Product, ProductFilter, ExpiryStatus } from '@/types/product';
@@ -44,14 +45,20 @@ import {
 interface ProductListProps {
   products: Product[];
   onDelete: (id: string) => void;
+  initialSearchTerm?: string;
 }
 
-const ProductList = ({ products, onDelete }: ProductListProps) => {
+const ProductList = ({ products, onDelete, initialSearchTerm = '' }: ProductListProps) => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [statusFilter, setStatusFilter] = useState<ExpiryStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+
+  // Update search term when initialSearchTerm changes
+  useEffect(() => {
+    setSearchTerm(initialSearchTerm);
+  }, [initialSearchTerm]);
 
   const handleEdit = (id: string) => {
     navigate(`/edit/${id}`);
@@ -174,24 +181,8 @@ const ProductList = ({ products, onDelete }: ProductListProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.length > 0 ? (
-              products.filter((product) => {
-                const matchesSearch = 
-                  searchTerm === '' || 
-                  product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  product.batchId?.toLowerCase().includes(searchTerm.toLowerCase());
-                
-                const matchesStatus = 
-                  statusFilter === 'all' || 
-                  getExpiryStatus(product.expiryDate) === statusFilter;
-                
-                const matchesCategory = 
-                  categoryFilter === 'all' || 
-                  product.category === categoryFilter;
-                
-                return matchesSearch && matchesStatus && matchesCategory;
-              }).map((product) => (
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
                 <TableRow key={product.id} className={getStatusStyles(product.expiryDate)}>
                   <TableCell className="font-medium">
                     <div>
